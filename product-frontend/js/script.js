@@ -5,49 +5,43 @@ function convertToNumber(priceFormat){
     return priceFormat.replace(/\./g, '').replace(',', '.');
 }
 
-var products = [
-    {
-        id: 1,
-        name: "Computador M1-TX",
-        description: "Intel i7, 16GB, SSD 256, HD 1TB",
-        price: 4500,
-        category: 1,
-        promotion: true,
-        new: true
-    },
-    {
-        id: 2,
-        name: "Computador M2-TX",
-        description: "Intel i5, 8GB, HD 1TB",
-        price: 2600,
-        category: 2,
-        promotion: false,
-        new: false
-    },
-    {
-        id: 3,
-        name: "Computador M7",
-        description: "Intel i7, 32GB, SSD 512, HD 1TB",
-        price: 5950,
-        category: 3,
-        promotion: false,
-        new: true
-    },
-];
+var products = [];
 
-var categories = [
-    {id: 1, name: "Produção Própria"},
-    {id: 2, name: "Nacional"},
-    {id: 3, name: "Importado"}
-];
+var categories = [];
 
+loadCategories();
 loadProducts();
 
 
+
+function loadCategories(){
+
+    $.ajax({
+        url:"http://localhost:8080/categories",
+        type: "GET",
+        async: false,
+        success: (response) => {
+            categories = response;
+
+            for(var cat of categories){
+                document.getElementById("selectCategoria").innerHTML += `<option value="${cat.id}">${cat.name}</option>`;
+            }
+
+      }
+  });
+}
+
 function loadProducts(){
-    for(let prod of products){
-        addNewRow(prod);
-    }
+
+    $.getJSON("http://localhost:8080/products", (response) => {
+
+        products = response;
+        for(let prod of products){
+            addNewRow(prod);
+        }
+
+    });
+
 }
 
 function save(){
@@ -57,15 +51,24 @@ function save(){
         name: document.getElementById("inputNome").value,
         description: document.getElementById("inputDescricao").value,
         price: convertToNumber(document.getElementById("inputPreco").value),
-        category: document.getElementById("selectCategoria").value,
+        idCategory: document.getElementById("selectCategoria").value,
         promotion: document.getElementById("checkboxPromocao").checked,
-        new: document.getElementById("checkboxLancamento").checked
+        newProduct: document.getElementById("checkboxLancamento").checked
     };
 
-addNewRow(prod);
-products.push(prod);
+    $.ajax({
+        url:"http://localhost:8080/products",
+        type: "POST",
+        contentType: "application/json",
+        data: JSON.stringify(prod),
+        success: (product) => {
+            addNewRow(product);
+            products.push(product);
+            document.getElementById("formProduto").reset();
 
-document.getElementById("formProduto").reset();
+      }
+  });
+
 
 }
 
@@ -93,7 +96,7 @@ function addNewRow(prod){
     var priceNode = document.createTextNode(formatter.format(prod.price));
     newRow.insertCell().appendChild(priceNode);
 
-    var categoryNode = document.createTextNode(categories[prod.category - 1].name);
+    var categoryNode = document.createTextNode(categories[prod.idCategory - 1].name);
     newRow.insertCell().appendChild(categoryNode);
 
     var options = "";
@@ -101,7 +104,7 @@ function addNewRow(prod){
         options = "<span class='badge bg-success me-1'>P</span>";
     }
 
-    if (prod.new){
+    if (prod.newProduct){
         options += "<span class='badge bg-primary me-1'>L</span>";
     }
 
